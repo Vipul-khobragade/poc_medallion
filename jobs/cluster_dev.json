@@ -1,0 +1,20 @@
+{
+  "cluster_name": "poc-medallion-dev",
+  "spark_version": "15.4.x-scala2.12",
+  "node_type_id": "Standard_DS3_v2",
+  "num_workers": 0,
+  "autotermination_minutes": 30,
+  "data_security_mode": "SINGLE_USER",
+  "single_user_name": "<your-email>",
+  "runtime_engine": "STANDARD",
+  "azure_attributes": { "availability": "ON_DEMAND_AZURE", "first_on_demand": 1 },
+  "spark_conf": {
+    "spark.databricks.cluster.profile": "singleNode",
+    "spark.master": "local[*]",
+    "spark.databricks.delta.schema.autoMerge.enabled": "true",
+    "spark.databricks.delta.optimizeWrite.enabled": "true",
+    "spark.databricks.delta.autoCompact.enabled": "true",
+    "spark.sql.session.timeZone": "UTC"
+  },
+  "custom_tags": { "ResourceClass": "SingleNode", "project": "poc-medallion", "env": "dev" }
+}

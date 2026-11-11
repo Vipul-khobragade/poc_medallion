@@ -1,0 +1,160 @@
+{
+  "name": "poc_medallion_pipeline",
+  "max_concurrent_runs": 1,
+  "timeout_seconds": 7200,
+  "tags": {
+    "project": "poc-medallion"
+  },
+  "parameters": [
+    {
+      "name": "catalog",
+      "default": "dbw_poc_medallion"
+    },
+    {
+      "name": "dataset_ids",
+      "default": "ALL"
+    }
+  ],
+  "email_notifications": {
+    "on_failure": [
+      "<your-email>"
+    ]
+  },
+  "schedule": {
+    "quartz_cron_expression": "0 0 6 * * ?",
+    "timezone_id": "Asia/Kolkata",
+    "pause_status": "PAUSED"
+  },
+  "tasks": [
+    {
+      "task_key": "validate",
+      "notebook_task": {
+        "notebook_path": "/Workspace/Users/<your-email>/poc_medallion/notebooks/01_validate",
+        "source": "WORKSPACE",
+        "base_parameters": {
+          "catalog": "{{job.parameters.catalog}}",
+          "dataset_ids": "{{job.parameters.dataset_ids}}",
+          "run_id": "{{job.run_id}}"
+        }
+      },
+      "timeout_seconds": 1800,
+      "job_cluster_key": "poc_single_node"
+    },
+    {
+      "task_key": "bronze",
+      "notebook_task": {
+        "notebook_path": "/Workspace/Users/<your-email>/poc_medallion/notebooks/02_bronze",
+        "source": "WORKSPACE",
+        "base_parameters": {
+          "catalog": "{{job.parameters.catalog}}",
+          "dataset_ids": "{{job.parameters.dataset_ids}}",
+          "run_id": "{{job.run_id}}"
+        }
+      },
+      "timeout_seconds": 1800,
+      "job_cluster_key": "poc_single_node",
+      "depends_on": [
+        {
+          "task_key": "validate"
+        }
+      ],
+      "max_retries": 2,
+      "min_retry_interval_millis": 60000,
+      "retry_on_timeout": false
+    },
+    {
+      "task_key": "silver",
+      "notebook_task": {
+        "notebook_path": "/Workspace/Users/<your-email>/poc_medallion/notebooks/03_silver",
+        "source": "WORKSPACE",
+        "base_parameters": {
+          "catalog": "{{job.parameters.catalog}}",
+          "dataset_ids": "{{job.parameters.dataset_ids}}",
+          "run_id": "{{job.run_id}}"
+        }
+      },
+      "timeout_seconds": 1800,
+      "job_cluster_key": "poc_single_node",
+      "depends_on": [
+        {
+          "task_key": "bronze"
+        }
+      ],
+      "max_retries": 2,
+      "min_retry_interval_millis": 60000,
+      "retry_on_timeout": false
+    },
+    {
+      "task_key": "gold",
+      "notebook_task": {
+        "notebook_path": "/Workspace/Users/<your-email>/poc_medallion/notebooks/04_gold",
+        "source": "WORKSPACE",
+        "base_parameters": {
+          "catalog": "{{job.parameters.catalog}}",
+          "dataset_ids": "{{job.parameters.dataset_ids}}",
+          "run_id": "{{job.run_id}}"
+        }
+      },
+      "timeout_seconds": 1800,
+      "job_cluster_key": "poc_single_node",
+      "depends_on": [
+        {
+          "task_key": "silver"
+        }
+      ],
+      "max_retries": 1,
+      "min_retry_interval_millis": 60000,
+      "retry_on_timeout": false
+    },
+    {
+      "task_key": "finalize",
+      "notebook_task": {
+        "notebook_path": "/Workspace/Users/<your-email>/poc_medallion/notebooks/05_finalize",
+        "source": "WORKSPACE",
+        "base_parameters": {
+          "catalog": "{{job.parameters.catalog}}",
+          "dataset_ids": "{{job.parameters.dataset_ids}}",
+          "run_id": "{{job.run_id}}"
+        }
+      },
+      "timeout_seconds": 1800,
+      "job_cluster_key": "poc_single_node",
+      "depends_on": [
+        {
+          "task_key": "gold"
+        }
+      ],
+      "run_if": "ALL_DONE"
+    }
+  ],
+  "job_clusters": [
+    {
+      "job_cluster_key": "poc_single_node",
+      "new_cluster": {
+        "spark_version": "15.4.x-scala2.12",
+        "node_type_id": "Standard_DS3_v2",
+        "num_workers": 0,
+        "data_security_mode": "SINGLE_USER",
+        "single_user_name": "<your-email>",
+        "runtime_engine": "STANDARD",
+        "azure_attributes": {
+          "availability": "ON_DEMAND_AZURE",
+          "first_on_demand": 1
+        },
+        "spark_conf": {
+          "spark.databricks.cluster.profile": "singleNode",
+          "spark.master": "local[*]",
+          "spark.databricks.delta.schema.autoMerge.enabled": "true",
+          "spark.databricks.delta.optimizeWrite.enabled": "true",
+          "spark.databricks.delta.autoCompact.enabled": "true",
+          "spark.sql.session.timeZone": "UTC"
+        },
+        "custom_tags": {
+          "ResourceClass": "SingleNode",
+          "project": "poc-medallion",
+          "env": "dev"
+        }
+      }
+    }
+  ]
+}
