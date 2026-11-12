@@ -36,12 +36,12 @@ def run_silver(spark, catalog, ds, run_id, logger):
                 rejected = 0
                 if quarantine is not None:
                     rejected = quarantine.count()
-                    if rejected > 0:
-                        (quarantine.withColumn("_quarantined_ts", F.current_timestamp())
-                                   .withColumn("_run_id", F.lit(run_id))
-                                   .write.format("delta").mode("append")
-                                   .option("mergeSchema", "true")
-                                   .saveAsTable(f"{catalog}.{quarantine_table(name)}"))
+                    if rejected > 0:   # idempotent: same bad record is never stored twice
+                        quarantine_insert(
+                            sp,
+                            quarantine.withColumn("_quarantined_ts", F.current_timestamp())
+                                      .withColumn("_run_id", F.lit(run_id)),
+                            f"{catalog}.{quarantine_table(name)}")
 
                 keys = split_list(st["business_keys"])
                 n_clean = clean.count()
