@@ -4,7 +4,7 @@ from pyspark.sql import functions as F
 from .config import get_silver_tables, get_mappings, get_dq_rules
 from .flatten import flatten_parent, flatten_child
 from .dq import apply_dq
-from .merge import dedupe, upsert
+from .merge import dedupe, upsert, quarantine_insert
 from .utils import split_list, quarantine_table
 
 
